@@ -398,27 +398,27 @@ const Places = {
   async searchAlongRoute(routeCoordinates, keyword) {
     // routeCoordinates: [[lng, lat], ...] formátum (ORS-ből)
     const tags = this.resolveKeyword(keyword);
-    const sampled = this.sampleCoordinates(routeCoordinates, 40);
 
-    // Overpass koordináta-string: "lat1,lng1,lat2,lng2,..." (vesszővel elválasztva)
-    const coordString = sampled.map(c => `${c[1]},${c[0]}`).join(',');
-
-    // Tag szűrő összeállítása
-    let unionParts = '';
-    if (tags) {
-      for (const [k, v] of tags) {
-        const filter = `["${k}"="${v}"]`;
-        unionParts += `node${filter}(around:300,${coordString});\n`;
-        unionParts += `way${filter}(around:300,${coordString});\n`;
-      }
-    } else {
-      // Ismeretlen kulcsszó – dobunk egy informatív hibát timeout helyett
+    if (!tags) {
       throw new Error(
         `A "${keyword}" kulcsszót nem ismerem.\n\nPróbálj konkrétabb kifejezést, pl.:\npékség, kávézó, gyógyszertár, virágüzlet, autószervíz, bank, atm, posta, étterem`
       );
     }
 
-    const query = `[out:json][timeout:30];(${unionParts});out center tags;`;
+    // Bounding box számítása az útvonal köré (400m padding)
+    // Ez sokkal gyorsabb mint az around polyline, különösen elterjedt tageknél
+    const bbox = this.getRouteBoundingBox(routeCoordinates, 400);
+    const bboxStr = `${bbox.south},${bbox.west},${bbox.north},${bbox.east}`;
+
+    // Tag szűrő összeállítása
+    let unionParts = '';
+    for (const [k, v] of tags) {
+      const filter = `["${k}"="${v}"]`;
+      unionParts += `node${filter}(${bboxStr});\n`;
+      unionParts += `way${filter}(${bboxStr});\n`;
+    }
+
+    const query = `[out:json][timeout:25];(${unionParts});out 100 center tags;`;
 
     const response = await fetch(this.OVERPASS_URL, {
       method: 'POST',
@@ -428,24 +428,40 @@ const Places = {
     if (!response.ok) throw new Error('Overpass API hiba: ' + response.status);
 
     const data = await response.json();
-    const results = this.parseResults(data.elements);
+    const allResults = this.parseResults(data.elements);
+
+    // Csak az útvonaltól max. 300m-re lévő találatok maradnak
+    const results = allResults.filter(p => {
+      p.detourMeters = this.minDistanceToRoute(p.lat, p.lng, routeCoordinates);
+      return p.detourMeters <= 300;
+    });
 
     // Saját (manuálisan felvett) POI-k hozzáadása
     const customMatches = Storage.searchCustomPOIs(keyword).map(p => ({
       ...p,
       address: '',
       openingHours: null,
-      custom: true
+      custom: true,
+      detourMeters: this.minDistanceToRoute(p.lat, p.lng, routeCoordinates)
     }));
     results.push(...customMatches);
 
-    // Kitérő távolság kiszámítása és rendezés
-    results.forEach(p => {
-      p.detourMeters = this.minDistanceToRoute(p.lat, p.lng, routeCoordinates);
-    });
     results.sort((a, b) => a.detourMeters - b.detourMeters);
-
     return results;
+  },
+
+  // Bounding box számítása az útvonal koordinátái köré
+  getRouteBoundingBox(routeCoords, paddingMeters) {
+    const lats = routeCoords.map(c => c[1]);
+    const lngs = routeCoords.map(c => c[0]);
+    const latPad = paddingMeters / 111000;
+    const lngPad = paddingMeters / (111000 * Math.cos(Math.min(...lats) * Math.PI / 180));
+    return {
+      south: Math.min(...lats) - latPad,
+      north: Math.max(...lats) + latPad,
+      west:  Math.min(...lngs) - lngPad,
+      east:  Math.max(...lngs) + lngPad
+    };
   },
 
   // Nyers Overpass elemek átalakítása

@@ -42,6 +42,7 @@ const Places = {
     'koktélbár':          [['amenity', 'bar']],
 
     // --- Élelmiszer ---
+    'szuper':             [['shop', 'supermarket']],
     'szupermarket':       [['shop', 'supermarket']],
     'élelmiszer':         [['shop', 'convenience'], ['shop', 'supermarket']],
     'élelmiszerbolt':     [['shop', 'convenience'], ['shop', 'supermarket']],

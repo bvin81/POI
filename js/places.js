@@ -405,18 +405,20 @@ const Places = {
       );
     }
 
-    // Bounding box számítása az útvonal köré (400m padding)
-    // Ez sokkal gyorsabb mint az around polyline, különösen elterjedt tageknél
-    const bbox = this.getRouteBoundingBox(routeCoordinates, 400);
-    const bboxStr = `${bbox.south},${bbox.west},${bbox.north},${bbox.east}`;
+    // Around polyline: az útvonal mentén 200m-es sávban keres
+    // Kevés mintapont (15) + kis sugár (200m) = gyors és célzott keresés
+    const sampled = this.sampleCoordinates(routeCoordinates, 15);
+    const coordString = sampled.map(c => `${c[1]},${c[0]}`).join(',');
 
-    // Tag szűrő összeállítása (nwr = node + way + relation, egy lekérdezésben)
+    // Tag szűrő összeállítása
     let unionParts = '';
     for (const [k, v] of tags) {
-      unionParts += `nwr["${k}"="${v}"](${bboxStr});\n`;
+      const filter = `["${k}"="${v}"]`;
+      unionParts += `node${filter}(around:200,${coordString});\n`;
+      unionParts += `way${filter}(around:200,${coordString});\n`;
     }
 
-    const query = `[out:json][timeout:25];(${unionParts});out 100 center tags;`;
+    const query = `[out:json][timeout:25];(${unionParts});out 60 center tags;`;
 
     const response = await fetch(this.OVERPASS_URL, {
       method: 'POST',
@@ -428,10 +430,10 @@ const Places = {
     const data = await response.json();
     const allResults = this.parseResults(data.elements);
 
-    // Csak az útvonaltól max. 300m-re lévő találatok maradnak
+    // Kitérő kiszámítása (az around már 200m-re szűrt, itt csak rendezünk)
     const results = allResults.filter(p => {
       p.detourMeters = this.minDistanceToRoute(p.lat, p.lng, routeCoordinates);
-      return p.detourMeters <= 300;
+      return p.detourMeters <= 250;
     });
 
     // Saját (manuálisan felvett) POI-k hozzáadása

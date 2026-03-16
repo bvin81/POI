@@ -1,0 +1,371 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+
+/* --- Térkép --- */
+#map {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+/* --- Alsó panel --- */
+#panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: white;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+  max-height: 65vh;
+  overflow-y: auto;
+  padding: 20px 16px 24px;
+}
+
+.panel-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #666;
+  margin-top: -8px;
+  margin-bottom: 10px;
+}
+
+/* --- Gombok --- */
+.primary-btn {
+  background: #4285F4;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.primary-btn:hover { background: #3070d4; }
+.primary-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+.secondary-btn {
+  background: #f0f0f0;
+  color: #333;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.secondary-btn:hover { background: #e0e0e0; }
+
+.icon-btn {
+  background: #f5f5f5;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 18px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.icon-btn:hover { background: #e8e8e8; }
+
+/* --- Form elemek --- */
+.input-group {
+  margin-bottom: 12px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+input[type="text"], select {
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 15px;
+  width: 100%;
+  background: white;
+  color: #1a1a1a;
+  outline: none;
+}
+
+input[type="text"]:focus, select:focus {
+  border-color: #4285F4;
+}
+
+/* --- Elrendezés segédosztályok --- */
+.row-gap {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.flex-grow { flex: 1; }
+.mt-8 { margin-top: 8px; }
+
+/* --- Megállók lista --- */
+.stop-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8f8f8;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.stop-item .stop-name { flex: 1; }
+
+.remove-stop {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.remove-stop:hover { color: #e33; }
+
+/* --- Találatok --- */
+.result-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.result-item:last-child { border-bottom: none; }
+
+.result-emoji {
+  font-size: 24px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.result-info { flex: 1; }
+
+.result-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.result-addr {
+  font-size: 13px;
+  color: #777;
+  margin-top: 2px;
+}
+
+.result-detour {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2a9d5c;
+  margin-top: 3px;
+}
+
+.result-hours {
+  font-size: 12px;
+  color: #4285F4;
+  margin-top: 3px;
+}
+
+.select-btn {
+  background: #4285F4;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.select-btn:hover { background: #3070d4; }
+
+.empty-msg {
+  text-align: center;
+  color: #999;
+  padding: 20px 0;
+  font-size: 14px;
+}
+
+/* --- Mentett helyek --- */
+.saved-place-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+}
+
+.remove-place {
+  background: none;
+  border: none;
+  color: #e33;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+/* --- Betöltés --- */
+#loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 15px;
+  color: #555;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #4285F4;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* --- POI marker --- */
+.poi-dot {
+  font-size: 22px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+/* --- Megálló marker (sorszámozott, narancssárga) --- */
+.stop-map-marker {
+  width: 28px;
+  height: 28px;
+  background: #f4a020;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 50%;
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+/* --- Szekció elválasztó --- */
+.section-divider {
+  border: none;
+  border-top: 1px solid #eee;
+  margin: 16px 0 12px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* --- Saját POI lista --- */
+.custom-poi-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+}
+
+.custom-poi-item:last-child { border-bottom: none; }
+
+.custom-poi-info { flex: 1; }
+.custom-poi-name { font-weight: 600; color: #1a1a1a; }
+.custom-poi-keyword { font-size: 12px; color: #888; margin-top: 1px; }
+
+/* --- Helyszín státusz --- */
+.location-status {
+  font-size: 13px;
+  color: #888;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+.location-status.set { color: #2a9d5c; font-style: normal; font-weight: 600; }
+
+/* --- Térkép kattintás tipp --- */
+.pick-hint {
+  background: #4285F4;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-top: 8px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* --- Érkezési értesítés (toast) --- */
+.arrival-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-80px);
+  background: #2a9d5c;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  z-index: 100;
+  transition: transform 0.3s ease;
+  white-space: nowrap;
+}
+
+.arrival-toast.toast-visible {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* --- Segédosztály --- */
+.hidden { display: none !important; }

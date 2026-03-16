@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Útvonal Kereső</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <!-- Betöltés jelző -->
+  <div id="loading-overlay" class="hidden">
+    <div class="spinner"></div>
+    <p>Betöltés...</p>
+  </div>
+
+  <!-- Alsó panel -->
+  <div id="panel">
+
+    <!-- Főnézet -->
+    <div id="view-main">
+      <h2 class="panel-title">Útvonal tervező</h2>
+
+      <div class="input-group">
+        <label>Kiindulás</label>
+        <div class="row-gap">
+          <select id="origin-select" class="flex-grow">
+            <option value="gps">📍 Aktuális pozíció (GPS)</option>
+          </select>
+          <button id="btn-manage-places" class="icon-btn" title="Helyek kezelése">⚙️</button>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Úticél</label>
+        <div class="row-gap">
+          <select id="destination-select" class="flex-grow">
+            <option value="">Válassz mentett helyet...</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Köztes megállók</label>
+        <div id="stops-list"></div>
+        <button id="btn-add-stop" class="secondary-btn">+ Megálló hozzáadása</button>
+      </div>
+
+      <button id="btn-plan-route" class="primary-btn">Útvonal tervezése</button>
+    </div>
+
+    <!-- Keresés nézet -->
+    <div id="view-search" class="hidden">
+      <h2 class="panel-title">Mit keresel?</h2>
+      <div class="row-gap">
+        <input type="text" id="search-input" class="flex-grow" placeholder="pl. virágüzlet, pékség..." />
+        <button id="btn-voice" class="icon-btn" title="Hanggal keresés">🎤</button>
+      </div>
+      <div class="row-gap mt-8">
+        <button id="btn-search" class="primary-btn flex-grow">Keresés</button>
+        <button id="btn-cancel-search" class="secondary-btn flex-grow">Mégse</button>
+      </div>
+    </div>
+
+    <!-- Találatok nézet -->
+    <div id="view-results" class="hidden">
+      <div class="row-gap">
+        <h2 class="panel-title flex-grow">Találatok</h2>
+        <button id="btn-close-results" class="icon-btn">✕</button>
+      </div>
+      <p id="results-keyword" class="subtitle"></p>
+      <div id="results-list"></div>
+    </div>
+
+    <!-- Mentett helyek nézet -->
+    <div id="view-places" class="hidden">
+      <div class="row-gap">
+        <h2 class="panel-title flex-grow">Mentett helyek</h2>
+        <button id="btn-close-places" class="icon-btn">✕</button>
+      </div>
+      <div id="saved-places-list"></div>
+      <div class="input-group mt-8">
+        <label>Hely mentése (útvonal kiindulás/cél)</label>
+        <input type="text" id="new-place-name" placeholder="Hely neve (pl. Munkahely)" />
+        <div class="row-gap mt-8">
+          <button id="btn-save-current" class="secondary-btn flex-grow">📍 Aktuális pozíció</button>
+          <button id="btn-pick-on-map" class="secondary-btn flex-grow">🗺️ Térkép kattintással</button>
+        </div>
+      </div>
+      <div id="pick-hint" class="pick-hint hidden"></div>
+
+      <!-- Saját POI-k szekció -->
+      <div class="section-divider"></div>
+      <div class="row-gap">
+        <h3 class="section-title flex-grow">Saját helyek (kereséshez)</h3>
+        <button id="btn-add-custom-poi" class="icon-btn" title="Új saját hely hozzáadása">＋</button>
+      </div>
+      <p class="subtitle">Olyan helyek, amelyek kereséskor ajánlásként jelennek meg.</p>
+      <div id="custom-poi-list"></div>
+    </div>
+
+    <!-- Saját POI hozzáadása nézet -->
+    <div id="view-add-poi" class="hidden">
+      <div class="row-gap">
+        <h2 class="panel-title flex-grow">Saját hely hozzáadása</h2>
+        <button id="btn-close-add-poi" class="icon-btn">✕</button>
+      </div>
+      <div class="input-group">
+        <label>Hely neve</label>
+        <input type="text" id="poi-name" placeholder="pl. Ági pékség" />
+      </div>
+      <div class="input-group">
+        <label>Kategória (mire keresve jelenjen meg?)</label>
+        <input type="text" id="poi-keyword" placeholder="pl. pékség, virágüzlet, kávézó..." />
+      </div>
+      <div class="input-group">
+        <label>Helyszín</label>
+        <div class="row-gap">
+          <button id="btn-poi-use-gps" class="secondary-btn flex-grow">📍 Aktuális pozíció</button>
+          <button id="btn-poi-pick-map" class="secondary-btn flex-grow">🗺️ Térkép kattintással</button>
+        </div>
+        <p id="poi-location-status" class="location-status">Helyszín nincs megadva</p>
+      </div>
+      <div id="poi-pick-hint" class="pick-hint hidden"></div>
+      <button id="btn-save-poi" class="primary-btn">Mentés</button>
+    </div>
+
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/speech.js"></script>
+  <script src="js/places.js"></script>
+  <script src="js/routing.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

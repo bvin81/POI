@@ -309,6 +309,7 @@ const App = {
         this.destination
       ];
       this.currentRoute = await Routing.getRoute(waypoints);
+      this.updateRouteInfo();
     } finally {
       this.showLoading(false);
     }
@@ -468,32 +469,41 @@ const App = {
   // --- Útvonal info (maradék távolság és idő) ---
 
   updateRouteInfo() {
-    const el = document.getElementById('route-info');
-    if (!this.currentRoute) { el.classList.add('hidden'); return; }
+    try {
+      const el = document.getElementById('route-info');
+      if (!el || !this.currentRoute) {
+        document.getElementById('route-info')?.classList.add('hidden');
+        return;
+      }
 
-    const coords = this.currentRoute.geometry.coordinates;
-    let remainingMeters;
+      const coords = this.currentRoute.geometry.coordinates;
+      if (!coords || coords.length < 2) { el.classList.add('hidden'); return; }
 
-    if (this.currentLocation) {
-      remainingMeters = this.calcRemainingDistance(coords, this.currentLocation.lat, this.currentLocation.lng);
-    } else {
-      // GPS nincs még – teljes útvonal hossza
-      remainingMeters = this.currentRoute.properties?.summary?.distance
-        ?? this.calcTotalDistance(coords);
+      let remainingMeters;
+      if (this.currentLocation) {
+        remainingMeters = this.calcRemainingDistance(coords, this.currentLocation.lat, this.currentLocation.lng);
+      } else {
+        remainingMeters = this.currentRoute.properties?.summary?.distance
+          ?? this.calcTotalDistance(coords);
+      }
+
+      if (!remainingMeters || isNaN(remainingMeters)) { el.classList.add('hidden'); return; }
+
+      const distText = remainingMeters >= 1000
+        ? `📍 ${(remainingMeters / 1000).toFixed(1)} km`
+        : `📍 ${Math.round(remainingMeters)} m`;
+
+      // 5 km/h = 83.3 m/perc
+      const minutes = Math.round(remainingMeters / 83.3);
+      const timeText = minutes < 1   ? '⏱ < 1 perc'
+        : minutes < 60 ? `⏱ ~${minutes} perc`
+        : `⏱ ~${Math.floor(minutes / 60)} ó ${minutes % 60} perc`;
+
+      el.innerHTML = `<span>${distText}</span><span>${timeText}</span>`;
+      el.classList.remove('hidden');
+    } catch (e) {
+      console.warn('updateRouteInfo hiba:', e);
     }
-
-    const distText = remainingMeters >= 1000
-      ? `📍 ${(remainingMeters / 1000).toFixed(1)} km`
-      : `📍 ${Math.round(remainingMeters)} m`;
-
-    // 5 km/h = 83.3 m/perc
-    const minutes = Math.round(remainingMeters / 83.3);
-    const timeText = minutes < 1 ? '⏱ < 1 perc'
-      : minutes < 60 ? `⏱ ~${minutes} perc`
-      : `⏱ ~${Math.floor(minutes / 60)} ó ${minutes % 60} perc`;
-
-    el.innerHTML = `<span>${distText}</span><span>${timeText}</span>`;
-    el.classList.remove('hidden');
   },
 
   // Maradék távolság az útvonalon a jelenlegi pozíciótól

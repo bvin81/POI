@@ -410,12 +410,10 @@ const Places = {
     const bbox = this.getRouteBoundingBox(routeCoordinates, 400);
     const bboxStr = `${bbox.south},${bbox.west},${bbox.north},${bbox.east}`;
 
-    // Tag szűrő összeállítása
+    // Tag szűrő összeállítása (nwr = node + way + relation, egy lekérdezésben)
     let unionParts = '';
     for (const [k, v] of tags) {
-      const filter = `["${k}"="${v}"]`;
-      unionParts += `node${filter}(${bboxStr});\n`;
-      unionParts += `way${filter}(${bboxStr});\n`;
+      unionParts += `nwr["${k}"="${v}"](${bboxStr});\n`;
     }
 
     const query = `[out:json][timeout:25];(${unionParts});out 100 center tags;`;

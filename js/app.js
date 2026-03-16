@@ -35,6 +35,7 @@ const App = {
           this.origin = this.currentLocation;
         }
         this.checkArrival();
+        this.updateRouteInfo();
       },
       () => alert('GPS pozíció nem elérhető. Engedélyezd a helymeghatározást!'),
       { enableHighAccuracy: true, maximumAge: 5000 }
@@ -289,6 +290,7 @@ const App = {
     try {
       await this.planRouteInternal();
       MapManager.showRoute(this.currentRoute);
+      this.updateRouteInfo();
     } catch (e) {
       alert(e.message);
     }
@@ -461,6 +463,84 @@ const App = {
     const emoji = Places.getEmojiForKeyword(keyword);
     Storage.addCustomPOI(name, keyword, this.pendingPOILocation.lat, this.pendingPOILocation.lng, emoji);
     this.showView('places');
+  },
+
+  // --- Útvonal info (maradék távolság és idő) ---
+
+  updateRouteInfo() {
+    const el = document.getElementById('route-info');
+    if (!this.currentRoute) { el.classList.add('hidden'); return; }
+
+    const coords = this.currentRoute.geometry.coordinates;
+    let remainingMeters;
+
+    if (this.currentLocation) {
+      remainingMeters = this.calcRemainingDistance(coords, this.currentLocation.lat, this.currentLocation.lng);
+    } else {
+      // GPS nincs még – teljes útvonal hossza
+      remainingMeters = this.currentRoute.properties?.summary?.distance
+        ?? this.calcTotalDistance(coords);
+    }
+
+    const distText = remainingMeters >= 1000
+      ? `📍 ${(remainingMeters / 1000).toFixed(1)} km`
+      : `📍 ${Math.round(remainingMeters)} m`;
+
+    // 5 km/h = 83.3 m/perc
+    const minutes = Math.round(remainingMeters / 83.3);
+    const timeText = minutes < 1 ? '⏱ < 1 perc'
+      : minutes < 60 ? `⏱ ~${minutes} perc`
+      : `⏱ ~${Math.floor(minutes / 60)} ó ${minutes % 60} perc`;
+
+    el.innerHTML = `<span>${distText}</span><span>${timeText}</span>`;
+    el.classList.remove('hidden');
+  },
+
+  // Maradék távolság az útvonalon a jelenlegi pozíciótól
+  calcRemainingDistance(routeCoords, currentLat, currentLng) {
+    let minDist = Infinity;
+    let nearestIdx = 0;
+    let nearestT = 0;
+
+    for (let i = 0; i < routeCoords.length - 1; i++) {
+      const aLat = routeCoords[i][1],   aLng = routeCoords[i][0];
+      const bLat = routeCoords[i+1][1], bLng = routeCoords[i+1][0];
+      const dx = bLng - aLng, dy = bLat - aLat;
+      const lenSq = dx*dx + dy*dy;
+      let t = 0;
+      if (lenSq > 0) {
+        t = ((currentLng - aLng)*dx + (currentLat - aLat)*dy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+      }
+      const d = Places.haversineMeters(currentLat, currentLng, aLat + t*dy, aLng + t*dx);
+      if (d < minDist) { minDist = d; nearestIdx = i; nearestT = t; }
+    }
+
+    // Részleges szegmens + maradék szegmensek összege
+    const bLat = routeCoords[nearestIdx+1][1], bLng = routeCoords[nearestIdx+1][0];
+    const aLat = routeCoords[nearestIdx][1],   aLng = routeCoords[nearestIdx][0];
+    let remaining = Places.haversineMeters(
+      aLat + nearestT*(bLat - aLat), aLng + nearestT*(bLng - aLng),
+      bLat, bLng
+    );
+    for (let i = nearestIdx + 1; i < routeCoords.length - 1; i++) {
+      remaining += Places.haversineMeters(
+        routeCoords[i][1], routeCoords[i][0],
+        routeCoords[i+1][1], routeCoords[i+1][0]
+      );
+    }
+    return remaining;
+  },
+
+  calcTotalDistance(routeCoords) {
+    let total = 0;
+    for (let i = 0; i < routeCoords.length - 1; i++) {
+      total += Places.haversineMeters(
+        routeCoords[i][1], routeCoords[i][0],
+        routeCoords[i+1][1], routeCoords[i+1][0]
+      );
+    }
+    return total;
   },
 
   // --- Érkezési hangjelzés ---

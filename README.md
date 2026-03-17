@@ -107,3 +107,6 @@ Teljes lista: `js/places.js` → `OSM_TAGS` objektum (~130 kategória)
 - Közlekedési mód választó (gyalog / kerékpár / autó)
 - Offline mód előre letöltött térképadatokkal
 - Push értesítések háttérben futó ellenőrzéshez
+
+# folytatas
+claude --resume 9685c770-dcce-4c9d-bdc6-7124b21f2953

@@ -556,7 +556,7 @@ const App = {
   // --- Érkezési hangjelzés ---
 
   checkArrival() {
-    if (!this.currentLocation || this.stops.length === 0) return;
+    if (!this.currentLocation) return;
 
     this.stops.forEach((stop, i) => {
       if (this.arrivedStops.has(i)) return;
@@ -570,6 +570,19 @@ const App = {
         this.showToast(`Megérkeztél: ${stop.place.emoji} ${stop.place.name}`);
       }
     });
+
+    // Végállomás ellenőrzése
+    if (this.destination && !this.arrivedStops.has('dest')) {
+      const dist = Places.haversineMeters(
+        this.currentLocation.lat, this.currentLocation.lng,
+        this.destination.lat, this.destination.lng
+      );
+      if (dist < 50) {
+        this.arrivedStops.add('dest');
+        this.playArrivalSound();
+        this.showToast(`Megérkeztél: 🏁 ${this.destination.name || 'Úticél'}`);
+      }
+    }
   },
 
   playArrivalSound() {

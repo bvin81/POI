@@ -384,5 +384,62 @@ input[type="text"]:focus, select:focus {
   transform: translateX(-50%) translateY(0);
 }
 
+/* --- Térkép közép gomb --- */
+.map-control-btn {
+  position: fixed;
+  right: 16px;
+  bottom: calc(65vh + 12px);
+  z-index: 11;
+  background: white;
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-control-btn:hover { background: #f0f0f0; }
+
+/* --- Úticél javaslatok --- */
+.dest-suggestions {
+  background: white;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+  margin-top: 4px;
+  overflow: hidden;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.dest-suggestion-item {
+  padding: 10px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dest-suggestion-item:last-child { border-bottom: none; }
+.dest-suggestion-item:hover { background: #f5f5f5; }
+.dest-suggestion-item .dest-name { font-weight: 600; color: #1a1a1a; }
+.dest-suggestion-item .dest-sub  { font-size: 12px; color: #888; }
+
+.dest-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 12px 2px;
+  background: #fafafa;
+}
+
 /* --- Segédosztály --- */
 .hidden { display: none !important; }

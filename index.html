@@ -24,6 +24,9 @@
     <p>Betöltés...</p>
   </div>
 
+  <!-- Térkép közép gomb -->
+  <button id="btn-center-map" class="map-control-btn" title="Pozícióra középre">📍</button>
+
   <!-- Alsó panel -->
   <div id="panel">
 
@@ -44,10 +47,12 @@
       <div class="input-group">
         <label>Úticél</label>
         <div class="row-gap">
-          <select id="destination-select" class="flex-grow">
-            <option value="">Válassz mentett helyet...</option>
-          </select>
+          <input type="text" id="destination-input" class="flex-grow" placeholder="Cím vagy helynév..." autocomplete="off" />
+          <button id="btn-destination-search" class="icon-btn" title="Keresés">🔍</button>
+          <button id="btn-destination-pick" class="icon-btn" title="Térkép kattintással">🗺️</button>
         </div>
+        <div id="destination-suggestions" class="dest-suggestions hidden"></div>
+        <div id="destination-hint" class="pick-hint hidden">Kattints a térképen a célponthoz!</div>
       </div>
 
       <div class="input-group">

@@ -95,6 +95,13 @@ const MapManager = {
     this.waypointMarkers.push(marker);
   },
 
+  // Térkép visszaközépre az aktuális pozícióra
+  centerOnCurrentLocation() {
+    if (this.currentLocationMarker) {
+      this.map.setView(this.currentLocationMarker.getLatLng(), Math.max(this.map.getZoom(), 15));
+    }
+  },
+
   // POI jelölők törlése
   clearPOIMarkers() {
     this.poiMarkers.forEach(m => this.map.removeLayer(m));

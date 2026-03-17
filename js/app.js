@@ -9,6 +9,8 @@ const App = {
   currentRoute: null,        // GeoJSON Feature az ORS-től
   pendingKeyword: null,      // Melyik kulcsszóhoz keresünk éppen
   arrivedStops: new Set(),   // Mely megállóknál jeleztük már az érkezést
+  speedSamples: [],          // [{ lat, lng, ts }] – utolsó ~30s GPS pontok sebességhez
+  smoothedSpeed: null,       // m/perc, exponenciálisan simított aktuális sebesség
 
   // --- Inicializálás ---
 
@@ -27,8 +29,15 @@ const App = {
     let firstFix = true;
     navigator.geolocation.watchPosition(
       (pos) => {
-        this.currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        // Csak az első pozíciónál igazítjuk középre a térképet
+        const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+
+        // Sebesség nyilvántartás (utolsó 30 másodperc)
+        const now = Date.now();
+        this.speedSamples.push({ ...newLoc, ts: now });
+        this.speedSamples = this.speedSamples.filter(s => now - s.ts <= 30000);
+        this._updateSmoothedSpeed();
+
+        this.currentLocation = newLoc;
         MapManager.setCurrentLocation(this.currentLocation.lat, this.currentLocation.lng, firstFix);
         firstFix = false;
         if (document.getElementById('origin-select').value === 'gps') {
@@ -78,13 +87,17 @@ const App = {
     document.getElementById('btn-poi-pick-map').onclick   = () => this.startPickPOIOnMap();
     document.getElementById('btn-save-poi').onclick       = () => this.saveCustomPOI();
 
-    document.getElementById('destination-select').onchange = (e) => {
-      const idx = e.target.value;
-      if (idx === '') { this.destination = null; return; }
-      const places = Storage.getSavedPlaces();
-      this.destination = places[parseInt(idx)];
-      MapManager.setDestinationMarker(this.destination.lat, this.destination.lng, this.destination.name);
-    };
+    document.getElementById('btn-destination-search').onclick = () => this.searchDestination();
+    document.getElementById('btn-destination-pick').onclick  = () => this.startPickDestinationOnMap();
+    document.getElementById('destination-input').addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') this.searchDestination();
+      else this.showSavedPlaceSuggestions(e.target.value);
+    });
+    document.getElementById('destination-input').addEventListener('focus', (e) => {
+      this.showSavedPlaceSuggestions(e.target.value);
+    });
+
+    document.getElementById('btn-center-map').onclick = () => MapManager.centerOnCurrentLocation();
 
     document.getElementById('search-input').addEventListener('keyup', (e) => {
       if (e.key === 'Enter') this.performSearch();
@@ -320,27 +333,17 @@ const App = {
   loadSavedPlacesIntoSelect() {
     const places = Storage.getSavedPlaces();
 
-    const destSelect = document.getElementById('destination-select');
-    const prevDest = destSelect.value;
-    destSelect.innerHTML = '<option value="">Válassz mentett helyet...</option>';
-
     const origSelect = document.getElementById('origin-select');
     const prevOrig = origSelect.value;
     origSelect.innerHTML = '<option value="gps">📍 Aktuális pozíció (GPS)</option>';
 
     places.forEach((p, i) => {
-      const optD = document.createElement('option');
-      optD.value = i;
-      optD.textContent = p.name;
-      destSelect.appendChild(optD);
-
       const optO = document.createElement('option');
       optO.value = i;
       optO.textContent = p.name;
       origSelect.appendChild(optO);
     });
 
-    destSelect.value = prevDest;
     origSelect.value = prevOrig || 'gps';
   },
 
@@ -367,6 +370,131 @@ const App = {
       };
       list.appendChild(div);
     });
+  },
+
+  // --- Úticél keresés (Nominatim geocoding) ---
+
+  async searchDestination() {
+    const query = document.getElementById('destination-input').value.trim();
+    if (!query) {
+      this.showSavedPlaceSuggestions('');
+      return;
+    }
+
+    this.showLoading(true);
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=hu`;
+      const resp = await fetch(url);
+      const results = await resp.json();
+
+      const items = results.map(r => ({
+        name: r.display_name.split(',').slice(0, 2).join(', '),
+        fullName: r.display_name,
+        lat: parseFloat(r.lat),
+        lng: parseFloat(r.lon),
+        icon: '📍'
+      }));
+
+      this.showDestinationSuggestions(items, []);
+    } catch (e) {
+      alert('Helykereső hiba: ' + e.message);
+    } finally {
+      this.showLoading(false);
+    }
+  },
+
+  showSavedPlaceSuggestions(query) {
+    const places = Storage.getSavedPlaces();
+    const q = query.toLowerCase();
+    const filtered = places.filter(p => !q || p.name.toLowerCase().includes(q));
+    this.showDestinationSuggestions([], filtered);
+  },
+
+  showDestinationSuggestions(geocoded, saved) {
+    const container = document.getElementById('destination-suggestions');
+    container.innerHTML = '';
+
+    if (geocoded.length === 0 && saved.length === 0) {
+      container.classList.add('hidden');
+      return;
+    }
+
+    if (saved.length > 0) {
+      const label = document.createElement('div');
+      label.className = 'dest-group-label';
+      label.textContent = 'Mentett helyek';
+      container.appendChild(label);
+
+      saved.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'dest-suggestion-item';
+        item.innerHTML = `<span>📌</span><div><div class="dest-name">${p.name}</div></div>`;
+        item.onclick = () => this.setDestination({ name: p.name, lat: p.lat, lng: p.lng });
+        container.appendChild(item);
+      });
+    }
+
+    if (geocoded.length > 0) {
+      const label = document.createElement('div');
+      label.className = 'dest-group-label';
+      label.textContent = 'Keresési eredmények';
+      container.appendChild(label);
+
+      geocoded.forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'dest-suggestion-item';
+        item.innerHTML = `<span>📍</span><div><div class="dest-name">${r.name}</div><div class="dest-sub">${r.fullName.split(',').slice(2, 4).join(',').trim()}</div></div>`;
+        item.onclick = () => this.setDestination({ name: r.name, lat: r.lat, lng: r.lng });
+        container.appendChild(item);
+      });
+    }
+
+    container.classList.remove('hidden');
+  },
+
+  setDestination(place) {
+    this.destination = place;
+    document.getElementById('destination-input').value = place.name;
+    document.getElementById('destination-suggestions').classList.add('hidden');
+    MapManager.setDestinationMarker(place.lat, place.lng, place.name);
+    this.currentRoute = null;
+    this.arrivedStops.delete('dest');
+  },
+
+  startPickDestinationOnMap() {
+    const hint = document.getElementById('destination-hint');
+    hint.classList.remove('hidden');
+    MapManager.enablePickMode((lat, lng) => {
+      hint.classList.add('hidden');
+      this.setDestination({ name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, lat, lng });
+    });
+  },
+
+  // --- Sebesség számítás ---
+
+  _updateSmoothedSpeed() {
+    const s = this.speedSamples;
+    if (s.length < 2) return;
+
+    const elapsed = (s[s.length - 1].ts - s[0].ts) / 1000; // sec
+    if (elapsed < 3) return;
+
+    let totalDist = 0;
+    for (let i = 1; i < s.length; i++) {
+      totalDist += Places.haversineMeters(s[i-1].lat, s[i-1].lng, s[i].lat, s[i].lng);
+    }
+
+    const speedMPerMin = (totalDist / elapsed) * 60;
+    // Realisztikus gyalogos/biciklis határ: 0.5–20 km/h = 8.3–333 m/perc
+    const clamped = Math.max(8.3, Math.min(333, speedMPerMin));
+
+    this.smoothedSpeed = this.smoothedSpeed === null
+      ? clamped
+      : 0.3 * clamped + 0.7 * this.smoothedSpeed;
+  },
+
+  getSpeedMPerMin() {
+    return this.smoothedSpeed ?? 83.3; // fallback: 5 km/h
   },
 
   saveCurrentPlace() {
@@ -493,8 +621,7 @@ const App = {
         ? `📍 ${(remainingMeters / 1000).toFixed(1)} km`
         : `📍 ${Math.round(remainingMeters)} m`;
 
-      // 5 km/h = 83.3 m/perc
-      const minutes = Math.round(remainingMeters / 83.3);
+      const minutes = Math.round(remainingMeters / this.getSpeedMPerMin());
       const timeText = minutes < 1   ? '⏱ < 1 perc'
         : minutes < 60 ? `⏱ ~${minutes} perc`
         : `⏱ ~${Math.floor(minutes / 60)} ó ${minutes % 60} perc`;

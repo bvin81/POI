@@ -387,7 +387,13 @@ const App = {
 
     this.showLoading(true);
     try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=hu`;
+      let locationParams = '';
+      if (this.currentLocation) {
+        const { lat, lng } = this.currentLocation;
+        const d = 1.0; // ~100 km-es előnyzóna
+        locationParams = `&viewbox=${lng-d},${lat+d},${lng+d},${lat-d}&bounded=0`;
+      }
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=hu${locationParams}`;
       const resp = await fetch(url);
       const results = await resp.json();
 

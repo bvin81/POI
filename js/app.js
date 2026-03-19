@@ -11,6 +11,9 @@ const App = {
   arrivedStops: new Set(),   // Mely megállóknál jeleztük már az érkezést
   speedSamples: [],          // [{ lat, lng, ts }] – utolsó ~30s GPS pontok sebességhez
   smoothedSpeed: null,       // m/perc, exponenciálisan simított aktuális sebesség
+  nearDestWarned: false,     // Jelzett-e már az 50m-es közelítési figyelmeztetés
+  _rerouteTimeout: null,     // Eltérés utáni újratervezés időzítője
+  _lastRerouteAt: 0,         // Utolsó automatikus újratervezés időpontja (ms)
 
   // --- Inicializálás ---
 
@@ -45,6 +48,7 @@ const App = {
         }
         this.checkArrival();
         this.updateRouteInfo();
+        this.checkRouteDeviation();
       },
       () => alert('GPS pozíció nem elérhető. Engedélyezd a helymeghatározást!'),
       { enableHighAccuracy: true, maximumAge: 5000 }
@@ -459,6 +463,8 @@ const App = {
     MapManager.setDestinationMarker(place.lat, place.lng, place.name);
     this.currentRoute = null;
     this.arrivedStops.delete('dest');
+    this.nearDestWarned = false;
+    if (this._rerouteTimeout) { clearTimeout(this._rerouteTimeout); this._rerouteTimeout = null; }
   },
 
   startPickDestinationOnMap() {
@@ -699,12 +705,18 @@ const App = {
     });
 
     // Végállomás ellenőrzése
-    if (this.destination && !this.arrivedStops.has('dest')) {
+    if (this.destination) {
       const dist = Places.haversineMeters(
         this.currentLocation.lat, this.currentLocation.lng,
         this.destination.lat, this.destination.lng
       );
-      if (dist < 50) {
+      // 50m-nél előjelzés
+      if (dist < 50 && !this.nearDestWarned && !this.arrivedStops.has('dest')) {
+        this.nearDestWarned = true;
+        this.showToast(`🏁 Hamarosan megérkezel: ${this.destination.name || 'Úticél'}`, '#f4a020');
+      }
+      // 10m-nél érkezési jelzés
+      if (dist < 10 && !this.arrivedStops.has('dest')) {
         this.arrivedStops.add('dest');
         this.playArrivalSound();
         this.showToast(`Megérkeztél: 🏁 ${this.destination.name || 'Úticél'}`);
@@ -729,9 +741,10 @@ const App = {
     } catch (e) { /* Audio API nem elérhető */ }
   },
 
-  showToast(message) {
+  showToast(message, color = '#2a9d5c') {
     const toast = document.createElement('div');
     toast.className = 'arrival-toast';
+    toast.style.background = color;
     toast.textContent = message;
     document.body.appendChild(toast);
     setTimeout(() => toast.classList.add('toast-visible'), 10);
@@ -739,6 +752,75 @@ const App = {
       toast.classList.remove('toast-visible');
       setTimeout(() => toast.remove(), 400);
     }, 4000);
+  },
+
+  // Útvonaltól való eltérés figyelése és automatikus újratervezés
+  checkRouteDeviation() {
+    if (!this.currentRoute || !this.currentLocation || !this.destination) return;
+    // Ha már megérkeztünk, nem kell figyelni
+    if (this.arrivedStops.has('dest')) return;
+
+    const coords = this.currentRoute.geometry.coordinates;
+    const dist = this._minDistToRoute(coords, this.currentLocation.lat, this.currentLocation.lng);
+
+    const DEVIATION_THRESHOLD = 50; // méter
+    const REROUTE_COOLDOWN = 30000; // 30 mp-enként max egyszer
+    const CONFIRM_DELAY = 8000;     // 8 mp folyamatos eltérés után tervez újra
+
+    if (dist > DEVIATION_THRESHOLD) {
+      if (!this._rerouteTimeout) {
+        const now = Date.now();
+        if (now - this._lastRerouteAt > REROUTE_COOLDOWN) {
+          this._rerouteTimeout = setTimeout(async () => {
+            this._rerouteTimeout = null;
+            this._lastRerouteAt = Date.now();
+            try {
+              const waypoints = [
+                this.currentLocation,
+                ...this.stops.map(s => ({ lat: s.place.lat, lng: s.place.lng })),
+                this.destination
+              ];
+              this.showLoading(true);
+              try {
+                this.currentRoute = await Routing.getRoute(waypoints);
+                this.updateRouteInfo();
+              } finally {
+                this.showLoading(false);
+              }
+              MapManager.showRoute(this.currentRoute);
+              this.showToast('🔄 Útvonal újratervezve', '#1a5fb4');
+            } catch (e) {
+              console.warn('Automatikus újratervezés sikertelen:', e);
+            }
+          }, CONFIRM_DELAY);
+        }
+      }
+    } else {
+      // Visszaállt az útvonalra – töröljük a függőben lévő újratervezést
+      if (this._rerouteTimeout) {
+        clearTimeout(this._rerouteTimeout);
+        this._rerouteTimeout = null;
+      }
+    }
+  },
+
+  // Minimális távolság az útvonaltól (méterben)
+  _minDistToRoute(coords, lat, lng) {
+    let minDist = Infinity;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const aLat = coords[i][1], aLng = coords[i][0];
+      const bLat = coords[i+1][1], bLng = coords[i+1][0];
+      const dx = bLng - aLng, dy = bLat - aLat;
+      const lenSq = dx*dx + dy*dy;
+      let t = 0;
+      if (lenSq > 0) {
+        t = ((lng - aLng)*dx + (lat - aLat)*dy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+      }
+      const d = Places.haversineMeters(lat, lng, aLat + t*dy, aLng + t*dx);
+      if (d < minDist) minDist = d;
+    }
+    return minDist;
   },
 
   // --- Betöltés jelző ---

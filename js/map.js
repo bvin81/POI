@@ -44,7 +44,7 @@ const MapManager = {
     } else {
       this.currentLocationMarker = L.circleMarker([lat, lng], {
         radius: 10,
-        fillColor: '#4285F4',
+        fillColor: '#e53935',
         color: 'white',
         weight: 3,
         fillOpacity: 1

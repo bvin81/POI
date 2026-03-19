@@ -840,23 +840,33 @@ if ('serviceWorker' in navigator) {
 
 // PWA telepítési prompt kezelés
 let _installPrompt = null;
+const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const _isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  || navigator.standalone === true;
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   _installPrompt = e;
-  const btn = document.getElementById('btn-install');
-  if (btn) btn.classList.remove('hidden');
 });
 
 document.addEventListener('click', async (e) => {
   if (e.target.id !== 'btn-install') return;
-  if (!_installPrompt) return;
-  _installPrompt.prompt();
-  const { outcome } = await _installPrompt.userChoice;
-  if (outcome === 'accepted') {
-    document.getElementById('btn-install').classList.add('hidden');
+
+  if (_installPrompt) {
+    // Android / Chrome – natív prompt
+    _installPrompt.prompt();
+    const { outcome } = await _installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      document.getElementById('btn-install').classList.add('hidden');
+    }
+    _installPrompt = null;
+  } else if (_isIOS) {
+    // iOS Safari – kézi útmutató
+    alert('Telepítés iPhone-ra / iPad-re:\n\n1. Koppints a megosztás ikonra (□↑) a Safari alján\n2. Válaszd: „Főképernyőre"\n3. Koppints a „Hozzáadás" gombra');
+  } else {
+    // Egyéb böngésző (Firefox, Samsung, stb.)
+    alert('Telepítés: a böngésző menüjében keresd a „Telepítés" vagy „Főképernyőre adás" lehetőséget.');
   }
-  _installPrompt = null;
 });
 
 window.addEventListener('appinstalled', () => {
@@ -864,3 +874,11 @@ window.addEventListener('appinstalled', () => {
   if (btn) btn.classList.add('hidden');
   _installPrompt = null;
 });
+
+// Ha már telepítve van (standalone módban fut), gomb elrejtése
+if (_isStandalone) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('btn-install');
+    if (btn) btn.classList.add('hidden');
+  });
+}

@@ -2,7 +2,6 @@
   "name": "Útvonal Kereső",
   "short_name": "Útvonal",
   "description": "Valós idejű POI ajánlások az útvonalon",
-  "id": "/utvonal-app/",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

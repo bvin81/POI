@@ -395,18 +395,16 @@ const Places = {
   },
 
   // Főfüggvény: helyek keresése az útvonal mentén
-  async searchAlongRoute(routeCoordinates, keyword) {
-    // routeCoordinates: [[lng, lat], ...] formátum (ORS-ből)
+  // currentLocation: { lat, lng } – ha meg van adva, névszerinti keresésnél távolság szerint rendez
+  async searchAlongRoute(routeCoordinates, keyword, currentLocation = null) {
     const tags = this.resolveKeyword(keyword);
 
     if (!tags) {
-      throw new Error(
-        `A "${keyword}" kulcsszót nem ismerem.\n\nPróbálj konkrétabb kifejezést, pl.:\npékség, kávézó, gyógyszertár, virágüzlet, autószervíz, bank, atm, posta, étterem`
-      );
+      // Névszerinti keresés: Overpass name~ lekérdezés az aktuális pozíció körül
+      return this.searchByName(keyword, currentLocation, routeCoordinates);
     }
 
     // Around polyline: az útvonal mentén 200m-es sávban keres
-    // Kevés mintapont (15) + kis sugár (200m) = gyors és célzott keresés
     const sampled = this.sampleCoordinates(routeCoordinates, 15);
     const coordString = sampled.map(c => `${c[1]},${c[0]}`).join(',');
 
@@ -430,7 +428,7 @@ const Places = {
     const data = await response.json();
     const allResults = this.parseResults(data.elements);
 
-    // Kitérő kiszámítása (az around már 200m-re szűrt, itt csak rendezünk)
+    // Kitérő kiszámítása
     const results = allResults.filter(p => {
       p.detourMeters = this.minDistanceToRoute(p.lat, p.lng, routeCoordinates);
       return p.detourMeters <= 250;
@@ -447,6 +445,49 @@ const Places = {
     results.push(...customMatches);
 
     results.sort((a, b) => a.detourMeters - b.detourMeters);
+    return results;
+  },
+
+  // Névszerinti keresés Overpass API-val, távolság szerinti rendezéssel
+  async searchByName(keyword, currentLocation, routeCoordinates) {
+    if (!currentLocation) {
+      throw new Error('A névszerinti kereséshez engedélyezd a GPS-t!');
+    }
+
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const { lat, lng } = currentLocation;
+    const radius = 5000; // 5 km-es kör
+
+    const query = `[out:json][timeout:25];(
+      node["name"~"${escaped}",i](around:${radius},${lat},${lng});
+      way["name"~"${escaped}",i](around:${radius},${lat},${lng});
+    );out 40 center tags;`;
+
+    const response = await fetch(this.OVERPASS_URL, {
+      method: 'POST',
+      body: 'data=' + encodeURIComponent(query)
+    });
+
+    if (!response.ok) throw new Error('Overpass API hiba: ' + response.status);
+
+    const data = await response.json();
+    const results = this.parseResults(data.elements);
+
+    if (results.length === 0) {
+      throw new Error(`Nem találtam ilyen nevű helyet a közelben (5 km): „${keyword}"`);
+    }
+
+    // Távolság a tartózkodási helytől
+    results.forEach(p => {
+      p.distanceMeters = Math.round(this.haversineMeters(lat, lng, p.lat, p.lng));
+      // detourMeters az útvonaltól, ha van aktív útvonal
+      p.detourMeters = routeCoordinates
+        ? this.minDistanceToRoute(p.lat, p.lng, routeCoordinates)
+        : null;
+    });
+
+    // Növekvő távolság a tartózkodási helytől
+    results.sort((a, b) => a.distanceMeters - b.distanceMeters);
     return results;
   },
 

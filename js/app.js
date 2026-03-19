@@ -173,7 +173,7 @@ const App = {
 
     try {
       const coords = this.currentRoute.geometry.coordinates;
-      const results = await Places.searchAlongRoute(coords, keyword);
+      const results = await Places.searchAlongRoute(coords, keyword, this.currentLocation);
       this.showResults(results, keyword);
     } catch (err) {
       alert('Keresési hiba: ' + err.message);
@@ -212,7 +212,7 @@ const App = {
 
     const detourText = place.detourMeters != null
       ? (place.detourMeters < 50 ? '✅ útba esik' : `↗️ ~${place.detourMeters} m kitérő`)
-      : '';
+      : (place.distanceMeters != null ? `📍 ${place.distanceMeters} m` : '');
 
     div.innerHTML = `
       <div class="result-emoji">${place.emoji}</div>

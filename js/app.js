@@ -742,6 +742,7 @@ const App = {
   },
 
   showToast(message, color = '#2a9d5c') {
+    document.querySelectorAll('.arrival-toast').forEach(t => t.remove());
     const toast = document.createElement('div');
     toast.className = 'arrival-toast';
     toast.style.background = color;
@@ -836,3 +837,30 @@ document.addEventListener('DOMContentLoaded', () => App.init());
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
 }
+
+// PWA telepítési prompt kezelés
+let _installPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _installPrompt = e;
+  const btn = document.getElementById('btn-install');
+  if (btn) btn.classList.remove('hidden');
+});
+
+document.addEventListener('click', async (e) => {
+  if (e.target.id !== 'btn-install') return;
+  if (!_installPrompt) return;
+  _installPrompt.prompt();
+  const { outcome } = await _installPrompt.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('btn-install').classList.add('hidden');
+  }
+  _installPrompt = null;
+});
+
+window.addEventListener('appinstalled', () => {
+  const btn = document.getElementById('btn-install');
+  if (btn) btn.classList.add('hidden');
+  _installPrompt = null;
+});

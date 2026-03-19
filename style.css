@@ -441,5 +441,21 @@ input[type="text"]:focus, select:focus {
   background: #fafafa;
 }
 
+/* --- Telepítési gomb --- */
+.install-btn {
+  background: #2a9d5c;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.install-btn:hover { background: #218a4e; }
+
 /* --- Segédosztály --- */
 .hidden { display: none !important; }

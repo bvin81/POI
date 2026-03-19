@@ -841,6 +841,8 @@ if ('serviceWorker' in navigator) {
 // PWA telepítési prompt kezelés
 let _installPrompt = null;
 const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const _isFirefox = navigator.userAgent.includes('Firefox');
+const _isChrome = navigator.userAgent.includes('Chrome') && !navigator.userAgent.includes('Edg');
 const _isStandalone = window.matchMedia('(display-mode: standalone)').matches
   || navigator.standalone === true;
 
@@ -853,7 +855,6 @@ document.addEventListener('click', async (e) => {
   if (e.target.id !== 'btn-install') return;
 
   if (_installPrompt) {
-    // Android / Chrome – natív prompt
     _installPrompt.prompt();
     const { outcome } = await _installPrompt.userChoice;
     if (outcome === 'accepted') {
@@ -861,10 +862,12 @@ document.addEventListener('click', async (e) => {
     }
     _installPrompt = null;
   } else if (_isIOS) {
-    // iOS Safari – kézi útmutató
-    alert('Telepítés iPhone-ra / iPad-re:\n\n1. Koppints a megosztás ikonra (□↑) a Safari alján\n2. Válaszd: „Főképernyőre"\n3. Koppints a „Hozzáadás" gombra');
+    alert('Telepítés iPhone / iPad eszközre:\n\n1. Koppints a megosztás ikonra (□↑) a Safari alján\n2. Válaszd: „Főképernyőre"\n3. Koppints a „Hozzáadás" gombra');
+  } else if (_isFirefox) {
+    alert('Firefox asztali verzióban sajnos nem támogatott a PWA telepítés.\n\nHasználj Chrome-ot, Brave-et vagy Edge-et!\n\nFirefox Androidon: menü (⋮) → „Telepítés" vagy „Hozzáadás a főképernyőhöz"');
+  } else if (_isChrome) {
+    alert('Chrome-ban keresd a telepítési ikont a címsávban (⊕ vagy letöltés ikon, a jobb szélen).\n\nHa nem látod: Chrome menü (⋮) → „Útvonal Kereső telepítése"\n\nHa korábban elutasítottad a telepítést, Chrome néhány napig nem ajánlja fel újra. Próbáld meg: Beállítások → Adatvédelem → Webhelyadatok törlése ennél az oldalnál, majd töltsd újra.');
   } else {
-    // Egyéb böngésző (Firefox, Samsung, stb.)
     alert('Telepítés: a böngésző menüjében keresd a „Telepítés" vagy „Főképernyőre adás" lehetőséget.');
   }
 });

@@ -50,7 +50,11 @@ const MapManager = {
         fillOpacity: 1
       }).addTo(this.map).bindPopup('📍 Aktuális pozíció');
     }
-    if (centerMap) this.map.setView([lat, lng], 15);
+    if (centerMap) {
+      this.map.setView([lat, lng], 15);
+      const panel = document.getElementById('panel');
+      if (panel) this.map.panBy([0, panel.offsetHeight / 2], { animate: false });
+    }
   },
 
   // Kiválasztott megállók jelölőinek frissítése
@@ -99,6 +103,11 @@ const MapManager = {
   centerOnCurrentLocation() {
     if (this.currentLocationMarker) {
       this.map.setView(this.currentLocationMarker.getLatLng(), Math.max(this.map.getZoom(), 15));
+      // Felfelé toljuk a nézetet, hogy a marker ne bújjon a panel alá
+      const panel = document.getElementById('panel');
+      if (panel) {
+        this.map.panBy([0, panel.offsetHeight / 2], { animate: false });
+      }
     }
   },
 

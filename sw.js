@@ -1,4 +1,4 @@
-const CACHE = 'utvonal-v6';
+const CACHE = 'utvonal-v7';
 const STATIC = [
   './',
   './index.html',

@@ -390,10 +390,11 @@ const App = {
       let locationParams = '';
       if (this.currentLocation) {
         const { lat, lng } = this.currentLocation;
-        const d = 1.0; // ~100 km-es előnyzóna
-        locationParams = `&viewbox=${lng-d},${lat+d},${lng+d},${lat-d}&bounded=0`;
+        const d = 2.5; // ~250 km-es előnyzóna – lefedi az egész régiót
+        locationParams = `&viewbox=${lng-d},${lat+d},${lng+d},${lat-d}&bounded=1`;
       }
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=hu${locationParams}`;
+      const lang = navigator.language || 'hu';
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=${lang}${locationParams}`;
       const resp = await fetch(url);
       const results = await resp.json();
 

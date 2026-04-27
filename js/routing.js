@@ -2,8 +2,8 @@
 // Ingyenes API kulcs: https://openrouteservice.org/dev/#/signup
 const Routing = {
 
-  // ⚠️ IDE ÍRD BE AZ ORS API KULCSODAT:
-  ORS_API_KEY: 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImVlOWY4OTM5NmEzZTQzNzk4MDBkZjRkMDVmNjE1MjQ1IiwiaCI6Im11cm11cjY0In0=',
+  // ⚠️ Replace with your own free API key: https://openrouteservice.org/dev/#/signup
+  ORS_API_KEY: 'YOUR_ORS_API_KEY_HERE',
 
   // Elérhető közlekedési módok
   PROFILES: {

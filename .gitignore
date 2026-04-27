@@ -1,0 +1,14 @@
+# Internal planning docs
+Kontextus.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code
+.claude/
+CLAUDE.md

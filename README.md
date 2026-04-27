@@ -1,126 +1,111 @@
-# Útvonal Kereső
+# Route Planner PWA
 
-Mobilbarát webalkalmazás, amely séta vagy ingázás közben valós idejű helyszín-ajánlásokat kínál az útvonal mentén. Megadod, hova tartasz – az app megmutatja, mi esik útba.
+A mobile-first Progressive Web App that finds places of interest along your route. Enter your destination, add stops (bakery, pharmacy, coffee shop…), and the app sorts them by detour distance — so you always pick the one least out of your way.
 
-## Funkciók
+Installable as a native-like Android app via Chrome.
 
-- **Útvonaltervezés** tetszőleges kiindulási pont és úticél között
-- **Szabad úticél megadás** – cím vagy helynév alapján (Nominatim geocoding), térkép kattintással, vagy mentett helyből
-- **Intelligens keresés** az útvonalon: pékség, kávézó, gyógyszertár és 100+ kategória
-- **Hang- és szöveges bevitel** kereséshez
-- **Kitérő szerinti rendezés** – a legkevesebbet kitérő helyek kerülnek felülre
-- **Több köztes megálló** hozzáadása, automatikus sorrendoptimalizálással
-- **Érkezési hangjelzés** 50 méteren belül – köztes megállóknál és végállomásnál egyaránt
-- **Mentett helyek** (Otthon, Munkahely stb.) gyors eléréshez
-- **Saját helyek felvétele** keresési kategóriával – akkor is ajánlja, ha nincs OSM-ben
-- **Folyamatos GPS-követés** – a kék pont mozog, a térkép nem ugrik el
-- **Térkép középre gomb** – egy kattintással visszaviszi a nézetet az aktuális pozícióra
-- **Valós sebesség alapú érkezési idő** – az utolsó 30 másodperc GPS adataiból számítva, exponenciális simítással
-- **PWA – telepíthető Android appként** – kezdőképernyőre adható, offline működés, natív app élmény
+---
 
-## Technológia
+## Tech Stack
 
-| Réteg | Eszköz |
+| Layer | Technology |
 |---|---|
-| Térkép | [Leaflet.js](https://leafletjs.com/) + OpenStreetMap |
-| Útvonaltervezés | [OpenRouteService API](https://openrouteservice.org/) |
-| POI keresés | [Overpass API](https://overpass-api.de/) (OSM adatok) |
-| Geocoding | [Nominatim](https://nominatim.org/) |
-| Hang bevitel | Web Speech API |
-| Adat tárolás | localStorage |
+| Map & routing display | Leaflet.js + OpenStreetMap tiles |
+| Route calculation | OpenRouteService API (free tier) |
+| POI search | Overpass API (OSM data, ~130 categories) |
+| Geocoding | Nominatim |
+| Voice input | Web Speech API |
 | Offline / PWA | Service Worker + Web App Manifest |
+| Storage | localStorage |
+| Build | None — pure HTML/CSS/JS |
 
-Minden eszköz **ingyenes**, regisztrációhoz csak az OpenRouteService API kulcs szükséges.
+---
 
-## Beállítás
+## Key Features
 
-### 1. ORS API kulcs
+- **Route planning** — enter any origin and destination (address, place name, map click, or saved location)
+- **On-route POI search** — finds stops along your path, sorted by detour distance
+- **130+ search categories** — bakery, café, pharmacy, bookstore, EV charger, vet, drinking fountain…
+- **Voice input** — speak your destination or stop type (Chrome)
+- **Multiple waypoints** — add several stops; the app auto-orders them (nearest first)
+- **Arrival alert** — audio notification within 50 m of each waypoint and final destination
+- **Real-time ETA** — estimated arrival recalculated from actual GPS speed (30 s rolling average, exponential smoothing)
+- **Saved places** — store Home, Work, and custom locations for one-tap selection
+- **Custom POIs** — add your own places with a search category (suggested even if not in OSM)
+- **Continuous GPS tracking** — blue dot follows you without snapping the map view
+- **Re-center button** — one tap returns the map to your current position
+- **PWA** — add to home screen on Android, works offline after first load
 
-1. Regisztrálj: [openrouteservice.org](https://openrouteservice.org/dev/#/signup)
-2. Másold ki az API kulcsot
-3. Nyisd meg `js/routing.js` és írd be:
+---
 
-```js
-ORS_API_KEY: 'ide_az_api_kulcsod',
+## File Structure
+
+```
+├── index.html          # UI structure
+├── style.css           # Mobile-first styles
+├── manifest.json       # PWA manifest (name, icon, display mode)
+├── sw.js               # Service Worker (offline cache)
+├── deploy.bat          # One-click GitHub Pages deploy (Windows)
+└── js/
+    ├── app.js          # Main controller
+    ├── map.js          # Leaflet map, GPS tracking, markers
+    ├── places.js       # Overpass API search, detour calculation
+    ├── routing.js      # OpenRouteService route requests
+    ├── storage.js      # localStorage (saved places, custom POIs)
+    └── speech.js       # Web Speech API voice input
 ```
 
-### 2. Futtatás
+---
 
-Az app egyszerű HTML/JS, nincs build lépés. Lokálisan HTTPS-t igényel (GPS és hangbevitel miatt):
+## Setup
+
+### 1. Get a free ORS API key
+
+Register at [openrouteservice.org](https://openrouteservice.org/dev/#/signup), then paste your key into `js/routing.js`:
+
+```js
+ORS_API_KEY: 'your_key_here',
+```
+
+The free tier allows 2,000 route requests per day.
+
+### 2. Run locally
+
+No build step required. GPS and voice input need HTTPS — use VS Code Live Server or:
 
 ```bash
-# VS Code Live Server extension (ajánlott)
-# Jobb klikk az index.html-en → Open with Live Server
-
-# Vagy npx-szel:
 npx serve .
 ```
 
-### 3. Deploy GitHub Pages-re
+### 3. Deploy to GitHub Pages
 
 ```bash
-# Egyszeri beállítás:
 git init
-git remote add origin https://github.com/felhasznalonev/utvonal-app.git
-
-# Változások feltöltése (deploy.bat duplaklikk):
-deploy.bat
+git remote add origin https://github.com/YOUR_USERNAME/route-planner-pwa.git
+git add . && git commit -m "deploy" && git push -u origin main
 ```
 
-GitHub Pages beállítása: repo → Settings → Pages → Branch: `main`
+Then: repo → Settings → Pages → Branch: `main`
 
-### 4. Telepítés Androidra (PWA)
+### 4. Install as Android app
 
-1. Nyisd meg a GitHub Pages URL-t **Chrome**-ban
-2. Chrome megkérdezi: „Hozzáadás a kezdőképernyőhöz?" → **Telepítés**
-3. Az app saját ikonnal, böngésző sáv nélkül indul, mint egy natív app
+1. Open the GitHub Pages URL in **Chrome**
+2. Tap "Add to Home Screen" when prompted
+3. Launches like a native app — no browser bar
 
-> Az ikonokhoz hozz létre egy `icons/` mappát `icon-192.png` és `icon-512.png` fájlokkal (pl. [favicon.io](https://favicon.io/favicon-generator/) segítségével).
+---
 
-## Fájlstruktúra
+## Known Limitations
 
-```
-utvonal-app/
-├── index.html          # Főoldal és UI struktúra
-├── style.css           # Mobilbarát stílusok
-├── manifest.json       # PWA manifest (név, ikon, megjelenítés)
-├── sw.js               # Service Worker (offline cache)
-├── deploy.bat          # Egy kattintásos GitHub deploy
-├── .nojekyll           # Jekyll letiltása GitHub Pages-en
-└── js/
-    ├── app.js          # Főkontroller
-    ├── map.js          # Leaflet térkép, GPS, markerek
-    ├── places.js       # Overpass API keresés, kitérő számítás
-    ├── routing.js      # OpenRouteService útvonaltervezés
-    ├── storage.js      # localStorage (mentett helyek, saját POI-k)
-    └── speech.js       # Web Speech API hangbevitel
-```
+- OSM data completeness varies by city — rural areas may have sparse POI coverage
+- No ratings or reviews (OSM is open data, not commercial)
+- Voice input works reliably in Chrome only
+- ORS free tier: 2,000 route requests/day
+- Saved places stored in `localStorage` — per device and domain
 
-## Használat
+---
 
-1. **Úticél megadása** – írj be egy címet vagy helynevet, válassz a javaslatokból, vagy kattints a térképen
-2. **Megálló hozzáadása** – kattints a `+ Megálló hozzáadása` gombra, írd be vagy mondd be, mit keresel
-3. **Útvonal tervezése** – az app sorba rendezi a megállókat (legközelebbi először) és megjeleníti az útvonalat
-4. **Indulás** – a kék pont követi a pozíciódat, az érkezési idő a valós sebességed alapján frissül, megérkezéskor hangjelzés szól
+## License
 
-## Keresési kategóriák (példák)
-
-`pékség` · `kávézó` · `étterem` · `gyógyszertár` · `virágüzlet` · `borbély` · `autószervíz` · `buszmegálló` · `elektromos töltő` · `könyvtár` · `állatorvos` · `ivókút`
-
-Teljes lista: `js/places.js` → `OSM_TAGS` objektum (~130 kategória)
-
-## Ismert korlátok
-
-- Az OpenStreetMap adatok teljessége városonként változó – kisebb településeken hiányos lehet
-- Értékelések (csillagok) nem elérhetők az ingyenes OSM adatokban
-- A hangbevitel csak Chrome böngészőben működik megbízhatóan
-- Az ORS ingyenes tier napi 2000 útvonaltervezési kérést engedélyez
-- A mentett helyek localStorage-ban tárolódnak – eszközönként és domain-enként külön
-
-## Lehetséges fejlesztések
-
-- Google Places API integráció értékelésekhez
-- Közlekedési mód választó (gyalog / kerékpár / autó)
-- Push értesítések háttérben futó ellenőrzéshez
-
-claude --resume 9685c770-dcce-4c9d-bdc6-7124b21f2953
+[CC BY-NC 4.0](LICENSE) — free to use for learning and non-commercial purposes.  
+Portfolio project by [bvin81](https://github.com/bvin81).
